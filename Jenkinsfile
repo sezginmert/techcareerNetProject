@@ -1,39 +1,59 @@
 pipeline {
     agent any
 
-    triggers {
-        cron('02 23 * * *') // Her gün 22:30'da çalışır
+    tools {
+        maven 'Maven 3.8.5'
+        jdk 'JDK 17'
     }
 
-    tools {
-        MAVEN_HOME 'Maven 3.9.9'  // Jenkins'te tanımlı olan Maven adı
-        JAVA_HOME 'Java 17.0.14'        // Java versiyonu
+    environment {
+        MAVEN_OPTS = "-Dmaven.test.failure.ignore=true"
+    }
+
+    triggers {
+        cron('40 23 * * *')  // Her akşam 23:40'da otomatik çalışır
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/sezginmert/techcareerNetProject.git' // GitHub repo URL
+                git 'https://github.com/sezginmert/techcareerNetProject.git'
             }
         }
 
-        stage('Build & Test') {
+        stage('Install Dependencies') {
             steps {
-                sh 'mvn clean test'
+                sh 'mvn clean install -DskipTests'
             }
         }
 
-        stage('Generate Report') {
+        stage('Run Tests') {
+            steps {
+                sh 'mvn test'
+            }
+        }
+
+        stage('Allure Report') {
             steps {
                 sh 'mvn allure:report'
+            }
+        }
+
+        stage('Publish Allure Report') {
+            steps {
+                allure includeProperties: false, jdk: '', reportBuildPolicy: 'ALWAYS'
             }
         }
     }
 
     post {
         always {
-            archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
-            junit 'target/cucumber-reports/*.xml'
+            junit '**/target/surefire-reports/*.xml'
+        }
+        failure {
+            mail to: 'you@example.com',
+                 subject: "❌ Build Failed - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "Something went wrong!\n\nCheck it here: ${env.BUILD_URL}"
         }
     }
 }
