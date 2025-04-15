@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     tools {
-        maven 'Maven 3.8.5'
-        jdk 'JDK 17'
+        MAVEN_HOME 'Maven 3.8.5'
+        JAVA_HOME 'JDK 17'
     }
 
     environment {
@@ -11,7 +11,7 @@ pipeline {
     }
 
     triggers {
-        cron('39 23 * * *')  // Her akşam 23:40'da otomatik çalışır
+        cron('41 23 * * *')  // Her akşam 23:40'da otomatik çalışır
     }
 
     stages {
