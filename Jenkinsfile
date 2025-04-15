@@ -11,7 +11,7 @@ pipeline {
     }
 
     triggers {
-        cron('47 23 * * *')  // Her akşam 23:40'da otomatik çalışır
+        cron('49 23 * * *')  // Her akşam 23:40'da otomatik çalışır
     }
 
     stages {
