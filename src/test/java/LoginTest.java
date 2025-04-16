@@ -25,6 +25,7 @@ public class LoginTest extends BaseTest {
 
     }
 
+
     @Test(description = "Basarisiz kullanici giris kontrolu")
     public void loginUnSuccessFullControl(){
         registerPage.singUpLogin();

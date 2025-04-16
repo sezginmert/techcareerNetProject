@@ -1,58 +1,73 @@
 pipeline {
 	agent any
-
-    environment {
-		RECIPIENT = 'sezginmertt@yahoo.com'
-        GIT_CREDENTIALS_ID = 'sezgin'
-        TARGET_BRANCH = 'main'
-        REPO_URL = 'https://github.com/sezginmert/techcareerNetProject.git'
+    tools {
+		MAVEN_HOME 'Maven 3.9.9'
+        JAVA_HOME 'JDK 17'
     }
-
+    environment {
+		MAVEN_OPTS = "-Dmaven.test.failure.ignore=false"
+    }
+    triggers {
+		cron('49 23 * * *')  // Her akşam 23:49'da otomatik çalışır
+    }
     stages {
 		stage('Checkout') {
 			steps {
-				git credentialsId: "${env.GIT_CREDENTIALS_ID}", url: "${env.REPO_URL}", branch: "${env.TARGET_BRANCH}"
+				git branch: 'main', url: 'https://github.com/sezginmert/techcareerNetProject.git'
             }
         }
 
-        stage('Build & Test') {
+        stage('Install Dependencies') {
 			steps {
-				echo 'Running Maven tests with @test01'
-                bat 'mvn clean install -Dgroups=test01'
+				sh 'mvn clean install -DskipTests'
             }
         }
 
-        stage('Push to GitHub') {
+        stage('Run All Tests') {
+			steps {
+				sh 'mvn test'
+            }
+        }
+
+        stage('Allure Report') {
+			steps {
+				sh 'mvn allure:report'
+            }
+        }
+
+        stage('Publish Allure Report') {
+			steps {
+				allure includeProperties: false, jdk: '', reportBuildPolicy: 'ALWAYS'
+            }
+        }
+
+        stage('Git Push if Tests Passed') {
 			when {
-				expression {
-					currentBuild.result == null || currentBuild.result == 'SUCCESS'
-                }
+				expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
             }
             steps {
-				echo 'Tests passed, pushing to GitHub...'
-                withCredentials([usernamePassword(credentialsId: "${env.GIT_CREDENTIALS_ID}", usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-					bat """
-                        git config --global user.email "jenkins@example.com"
+				withCredentials([usernamePassword(credentialsId: 'github-credentials-id', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
+					sh '''
+                        git config --global user.email "jenkins@yourcompany.com"
                         git config --global user.name "Jenkins CI"
-                        git remote set-url origin https://${env.GIT_USER}:${env.GIT_PASS}@github.com/sezginmert/techcareerNetProject.git
                         git add .
-                        git commit -m "Automated commit by Jenkins after successful build" || echo "Nothing to commit"
-                        git push origin ${env.TARGET_BRANCH}
-                    """
+                        git commit -m "✅ All tests passed - auto commit from Jenkins"
+                        git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/sezginmert/techcareerNetProject.git
+                    '''
                 }
             }
         }
     }
 
     post {
-		failure {
-			mail to: "${env.RECIPIENT}",
-                 subject: "🚨 Build FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                 body: """\
-Build başarısız oldu.
+		always {
+			junit '**/target/surefire-reports/*.xml'
+        }
 
-Detaylar: ${env.BUILD_URL}console
-"""
+        failure {
+			mail to: 'sezginmertt@gmail.com',
+                 subject: "❌ Test Run Failed - ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "Some tests failed.\n\nCheck details: ${env.BUILD_URL}"
         }
     }
 }
