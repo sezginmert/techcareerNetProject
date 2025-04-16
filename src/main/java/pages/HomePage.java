@@ -22,5 +22,5 @@ public class HomePage extends BaseTest {
         Assert.assertEquals(message,text);
     }
 
-
+    String sdsd = "Ahmet";
 }
