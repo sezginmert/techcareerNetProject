@@ -23,4 +23,5 @@ public class HomePage extends BaseTest {
     }
 
     String sdsd = "Ahmet";
+    String ali = "sasas";
 }
